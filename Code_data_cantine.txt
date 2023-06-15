@@ -1,0 +1,397 @@
+import numpy 
+import pandas as pd
+import seaborn 
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
+from statsmodels.formula.api import ols
+import statsmodels.formula.api as smf
+from scipy.stats import t, shapiro
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import statsmodels
+from scipy.stats import chi2_contingency as chi2_contingency
+
+# Ouverture des fichiers
+frequentation = pd.read_csv("frequentation.csv")
+menus = pd.read_csv("menus.csv")
+
+# Affichage des informations
+frequentation.info()
+
+# Nous regardons les première valeurs, pour voir si l'on peut deja voir des valeurs à supprimer
+frequentation.head()
+
+# Nous regardons la somme des Doublons (pour vérifié qu'il n'y a pas deux fois la même ligne)
+frequentation.duplicated().sum()
+
+# Nous regardons les valeurs manquantes (pour vérifiés si certaines lignes doivent être supprimé)
+frequentation.isna().sum()
+
+# Nous regardons les stats du dataframe, ce qui nous permet de voir avec les colonne qu'on à rajouté les problème que peut avoir ce dataframe
+frequentation.describe(include = "all")
+
+# Ajout d'une colonne "freq_prevision" afin de visualiser le flux d'enfants mangeant à l'école par rapport aux previsions
+# Ajout d'une colonne "freq_reel" afin de visualiser le flux d'enfants mangeant à l'école
+# Ajout d'une colonne "diff_prev_reel" afin de visualiser la difference entre les données previsonnelles et la vérité terrain
+
+frequentation['freq_prevision'] = round(frequentation.prevision / frequentation.effectif *100)
+frequentation['freq_reel'] = round(frequentation.reel / frequentation.effectif *100)
+frequentation['diff_prev_reel'] = round(frequentation.reel / frequentation.prevision *100)
+
+frequentation
+
+frequentation["freq_reel"].hist(bins = 50)
+
+# On retire du dataframe les première colonne inutiles, en créant un autre dataframe (on peut remarquer sur les dernière lignes quelques problèmes dans les previsions comparé à la vérités terrain, que l'on va devoir supprimer)
+frequentation_first_clean = frequentation.drop(["Unnamed: 0", "semaine", "mois"], axis = 1)
+frequentation_first_clean
+
+# On met bien en avant la moyenne d'enfant allans manger à la cantine
+print("La fréquence réelle moyenne est de :", round(frequentation_first_clean.describe(include = 'all').loc["mean","freq_reel"], 1), "%")
+
+for col in frequentation_first_clean.columns:
+    print(col)
+
+frequentation_first_clean[["jour", "freq_reel"]].groupby("jour").mean()
+
+# On regardes pour chaques collonnes, quelles sont celle qui on un appacte sur la frequentation réel
+frequentation_first_clean[["greves", "freq_reel"]].groupby("greves").mean()
+
+lm = ols('freq_reel ~ greves', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+# On comprends que cette colonne est 
+frequentation_first_clean[["ferie", "freq_reel"]].groupby("ferie").mean()
+
+lm = ols('freq_reel ~ ferie', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+# On voit deja que cette colonne est inutile.
+frequentation_first_clean[["veille_ferie", "freq_reel"]].groupby("veille_ferie").mean()
+
+lm = ols('freq_reel ~ veille_ferie', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+# On voit deja que cette colonne est inutile.
+frequentation_first_clean[["retour_ferie", "freq_reel"]].groupby("retour_ferie").mean()
+
+lm = ols('freq_reel ~ retour_ferie', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+# On voit deja que cette colonne est importante 
+frequentation_first_clean[["vacances", "freq_reel"]].groupby("vacances").mean()
+
+lm = ols('freq_reel ~ vacances', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+# On voit deja que cette colonne est inutile.
+frequentation_first_clean[["retour_vacances", "freq_reel"]].groupby("retour_vacances").mean()
+
+lm = ols('freq_reel ~ retour_vacances', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+
+frequentation_first_clean[["veille_vacances", "freq_reel"]].groupby("veille_vacances").mean()
+
+lm = ols('freq_reel ~ veille_vacances', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+frequentation_first_clean[["fete_musulmane", "freq_reel"]].groupby("fete_musulmane").mean()
+
+lm = ols('freq_reel ~ fete_musulmane', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+frequentation[["ramadan", "freq_reel"]].groupby("ramadan").mean()
+
+lm = ols('freq_reel ~ ramadan', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+frequentation_first_clean[["fete_chretienne", "freq_reel"]].groupby("fete_chretienne").mean()
+
+lm = ols('freq_reel ~ fete_chretienne', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+# On voit deja que cette colonne est inutile.
+frequentation_first_clean[["fete_juive", "freq_reel"]].groupby("fete_juive").mean()
+
+lm = ols('freq_reel ~ fete_juive', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+# Pour ces trois dernière colonnes il est difficile de voir leurs utilités au vue du nombre de lignes qu'il y a
+frequentation_first_clean[["inc_grippe", "freq_reel"]].groupby("inc_grippe").mean()
+
+lm = ols('freq_reel ~ inc_grippe', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+frequentation_first_clean[["inc_gastro", "freq_reel"]].groupby("inc_gastro").mean()
+
+lm = ols('freq_reel ~ inc_gastro', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+frequentation_first_clean[["inc_varicelle", "freq_reel"]].groupby("inc_varicelle").mean()
+
+# On voit deja que cette colonne est inutile.
+lm = ols('freq_reel ~ inc_varicelle', data=frequentation_first_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+# On retire du dataframe une nouvelle fois les colonnes inutiles
+frequentation_second_clean = frequentation.drop(["veille_ferie","retour_ferie","retour_vacances","veille_vacances","ramadan","fete_juive","inc_grippe","inc_varicelle"], axis = 1)
+frequentation_second_clean
+
+# Ce graphiques nous permet de constater une amélioration dans la propretés du dataframe
+
+frequentation_second_clean["freq_reel"].hist(bins = 50)
+
+# On va appliquer un mask au dataframe ainsi on pourra supprimer toute les valeurs en dessous de 60% qui ne nous sront pas utiles 
+mask = frequentation_second_clean.freq_reel < 60
+mask2 = frequentation_second_clean.jour == "mercredi"
+
+frequentation_under_sixty = frequentation_second_clean[mask]
+
+frequentation_third_clean = frequentation_second_clean[~mask]
+
+frequentation_third_clean.head()
+
+# Ce graphiques nous permet de constater une amélioration dans la propretés du dataframe
+
+frequentation_third_clean["freq_reel"].hist(bins = 50)
+
+lm = ols('freq_reel ~ greves', data=frequentation_third_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+lm = ols('freq_reel ~ ferie', data=frequentation_third_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+lm = ols('freq_reel ~ vacances', data=frequentation_third_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+lm = ols('freq_reel ~ fete_musulmane', data=frequentation_third_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+lm = ols('freq_reel ~ fete_chretienne', data=frequentation_third_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+lm = ols('freq_reel ~ inc_gastro', data=frequentation_third_clean).fit()
+table = sm.stats.anova_lm(lm)
+print(table)
+
+# On retire du dataframe une nouvelle fois les colonnes inutiles
+frequentation_clean = frequentation_third_clean.drop(["ferie", "fete_chretienne"], axis = 1)
+frequentation_clean
+
+# Ce graphiques nous permet de constater une amélioration dans la propretés du dataframe
+
+frequentation_clean["freq_reel"].hist(bins = 50)
+
+plt.boxplot(frequentation_clean.groupby("annee_scolaire").count().sort_values("reel", ascending=False).reel)
+
+# Affichage des informations (menus)
+menus.info()
+
+# Affichage des premières lignes (menus)
+menus.head()
+
+# Stats du dataframe (menus)
+menus.describe(include = 'all')
+
+# Somme des valeurs manquantes (menus)
+menus.isna().sum()
+
+# Somme des Doublons (menus)
+menus.duplicated().sum()
+
+# On nettoie la dataframe de toute les colonnes inutiles
+menus_clean = menus.drop(["Unnamed: 0", "menu"], axis = 1)
+menus_clean
+
+df_final = pd.merge(frequentation_clean,menus_clean, on = 'date', how= 'outer', indicator=True)
+df_final
+
+df_final[df_final._merge=="right_only"]
+
+index = df_final[df_final._merge=="right_only"].index
+df_final.drop(index, inplace = True)
+df_final
+
+X = "reel"
+
+Y = "poisson"
+
+cont_1 = df_final[[X,Y]].pivot_table(index=X,columns=Y,aggfunc=len,margins=True,margins_name="Total")
+cont_1
+
+X = "jour"
+Y = "poisson"
+
+cont_1 = df_final[[X,Y]].pivot_table(index = X,columns = Y, aggfunc = len, margins = True, margins_name = "Total")
+cont_1
+
+tx = cont_1.loc[:,["Total"]]
+ty = cont_1.loc[["Total"],:]
+n = len(df_final)
+indep = round(tx.dot(ty) / n)
+indep
+
+chi2, p, r, t = chi2_contingency(cont_1)
+print(chi2, p)
+
+c = cont_1.fillna(0) # On remplace les valeurs nulles par 0
+measure = (c-indep)**2/indep
+xi_n = measure.sum().sum()
+table = measure/xi_n
+seaborn.heatmap(table.iloc[:-1,:-1],annot=c.iloc[:-1,:-1])
+plt.title('Matrice de corrélation entre le poisson et les jour de la semaine')
+plt.show()
+
+X = "jour"
+Y = "porc"
+
+cont_1 = df_final[[X,Y]].pivot_table(index=X,columns=Y,aggfunc=len,margins=True,margins_name="Total")
+cont_1
+
+tx = cont_1.loc[:,["Total"]]
+ty = cont_1.loc[["Total"],:]
+n = len(df_final)
+indep = round(tx.dot(ty) / n)
+indep
+
+c = cont_1.fillna(0) # On remplace les valeurs nulles par 0
+measure = (c-indep)**2/indep
+xi_n = measure.sum().sum()
+table = measure/xi_n
+seaborn.heatmap(table.iloc[:-1,:-1],annot=c.iloc[:-1,:-1])
+plt.title('Matrice de corrélation entre le porc et les jour de la semaine')
+plt.show()
+
+X = "jour"
+Y = "viande"
+
+cont_1 = df_final[[X,Y]].pivot_table(index=X,columns=Y,aggfunc=len,margins=True,margins_name="Total")
+cont_1
+
+tx = cont_1.loc[:,["Total"]]
+ty = cont_1.loc[["Total"],:]
+n = len(df_final)
+indep = round(tx.dot(ty) / n)
+indep
+
+c = cont_1.fillna(0) # On remplace les valeurs nulles par 0
+measure = (c-indep)**2/indep
+xi_n = measure.sum().sum()
+table = measure/xi_n
+seaborn.heatmap(table.iloc[:-1,:-1],annot=c.iloc[:-1,:-1])
+plt.title('Matrice de corrélation entre la viande et les jour de la semaine')
+plt.show()
+
+X = "jour"
+Y = "bio"
+
+cont_1 = df_final[[X,Y]].pivot_table(index=X,columns=Y,aggfunc=len,margins=True,margins_name="Total")
+cont_1
+
+tx = cont_1.loc[:,["Total"]]
+ty = cont_1.loc[["Total"],:]
+n = len(df_final)
+indep = round(tx.dot(ty) / n)
+indep
+
+c = cont_1.fillna(0) # On remplace les valeurs nulles par 0
+measure = (c-indep)**2/indep
+xi_n = measure.sum().sum()
+table = measure/xi_n
+seaborn.heatmap(table.iloc[:-1,:-1],annot=c.iloc[:-1,:-1])
+plt.title('Matrice de corrélation entre le bio et les jour de la semaine')
+plt.show()
+
+X = "jour"
+Y = "noel"
+
+cont_1 = df_final[[X,Y]].pivot_table(index=X,columns=Y,aggfunc=len,margins=True,margins_name="Total")
+cont_1
+
+tx = cont_1.loc[:,["Total"]]
+ty = cont_1.loc[["Total"],:]
+n = len(df_final)
+indep = round(tx.dot(ty) / n)
+indep
+
+c = cont_1.fillna(0) # On remplace les valeurs nulles par 0
+measure = (c-indep)**2/indep
+xi_n = measure.sum().sum()
+table = measure/xi_n
+seaborn.heatmap(table.iloc[:-1,:-1],annot=c.iloc[:-1,:-1])
+plt.title('Matrice de corrélation entre la viande et les jour de la semaine')
+plt.show()
+
+X = "jour"
+Y = "frites"
+
+cont_1 = df_final[[X,Y]].pivot_table(index=X,columns=Y,aggfunc=len,margins=True,margins_name="Total")
+cont_1
+
+tx = cont_1.loc[:,["Total"]]
+ty = cont_1.loc[["Total"],:]
+n = len(df_final)
+indep = round(tx.dot(ty) / n)
+indep
+
+c = cont_1.fillna(0) # On remplace les valeurs nulles par 0
+measure = (c-indep)**2/indep
+xi_n = measure.sum().sum()
+table = measure/xi_n
+seaborn.heatmap(table.iloc[:-1,:-1],annot=c.iloc[:-1,:-1])
+plt.title('Matrice de corrélation entre la viande et les jour de la semaine')
+plt.show()
+
+X = "jour"
+Y = "an_chinois"
+
+cont_1 = df_final[[X,Y]].pivot_table(index=X,columns=Y,aggfunc=len,margins=True,margins_name="Total")
+cont_1
+
+tx = cont_1.loc[:,["Total"]]
+ty = cont_1.loc[["Total"],:]
+n = len(df_final)
+indep = round(tx.dot(ty) / n)
+indep
+
+c = cont_1.fillna(0) # On remplace les valeurs nulles par 0
+measure = (c-indep)**2/indep
+xi_n = measure.sum().sum()
+table = measure/xi_n
+seaborn.heatmap(table.iloc[:-1,:-1],annot=c.iloc[:-1,:-1])
+plt.title('Matrice de corrélation entre la viande et les jour de la semaine')
+plt.show()
+
+import statsmodels.formula.api as smf
+reg_multi = smf.ols('greves ~ vacances + fete_musulmane + inc_gastro + prevision + reel + effectif + freq_prevision + freq_reel + diff_prev_reel', data=df_final).fit()
+print(reg_multi.summary())
+
+import statsmodels.formula.api as smf
+reg_multi = smf.ols('greves ~ vacances + prevision + reel + freq_prevision + freq_reel + diff_prev_reel', data=df_final).fit()
+print(reg_multi.summary())
+
+import statsmodels.formula.api as smf
+reg_multi = smf.ols('greves ~  prevision + reel + freq_prevision + freq_reel + diff_prev_reel', data=df_final).fit()
+print(reg_multi.summary())
+
+reg_multi = smf.ols('porc~viande+poisson+bio+noel+an_chinois', data=df_final).fit()
+print(reg_multi.summary())
